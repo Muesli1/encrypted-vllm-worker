@@ -5,6 +5,7 @@ import runpod
 
 from deep_filter import deep_filter
 
+VERSION = "v1.0.0"
 model_init_error = None
 
 try:
@@ -22,6 +23,7 @@ except Exception as init_e:
 
 
 def handler(job):
+    print("Processing with version", VERSION, "...")
     try:
         if model_init_error is not None:
             return {'error': str(model_init_error), 'init': True}
