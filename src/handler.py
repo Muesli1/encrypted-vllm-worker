@@ -1,26 +1,28 @@
+import os
+import json
+
 import runpod
 from vllm import LLM, SamplingParams
 
-prompts = [
-    "Hello, my name is",
-    "The president of the United States is",
-    "The capital of France is",
-    "The future of AI is",
-]
-sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
-llm = LLM(model="facebook/opt-125m")
 
+
+model_name = os.getenv("VLLM_MODEL_NAME")
+llm_parameters = os.getenv("VLLM_ENGINE_PARAMETERS")
+if llm_parameters is None:
+    llm_paramters = "{}"
+
+llm = LLM(model=model_name, **json.loads(llm_parameters))
 
 def handler(job):
     job_input = job['input']
 
     prompt = job_input.get('prompt', False)
+    sampling_params = job_input.get('parameters', {})
+
     if not prompt:
         return {'error': 'Missing "prompt" key in input!'}
 
-    output = llm.generate(prompt, sampling_params)[0]
-
-    return output.outputs[0].text
+    return llm.generate(prompt, SamplingParams(**sampling_params))
 
 
 runpod.serverless.start({"handler": handler})
