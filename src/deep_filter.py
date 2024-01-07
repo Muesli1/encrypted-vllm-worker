@@ -22,6 +22,11 @@ def deep_filter(obj, output_filter):
     # print(obj, output_filter, current_layer)
 
     if len(current_layer) == 0:
+        # Still convert objects to dicts
+        if isinstance(obj, list):
+            return [deep_filter(x, []) for x in obj]
+        if isinstance(obj, dict):
+            return {k: deep_filter(obj[k], []) for k in obj}
         return obj
 
     if isinstance(obj, list):
