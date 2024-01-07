@@ -5,10 +5,14 @@ import runpod
 
 from deep_filter import deep_filter
 
-VERSION = "v1.0.0"
 model_init_error = None
 
+VERSION = "unknown"
+
 try:
+    with open("current_version.txt", "r") as f:
+        VERSION = f.readline()
+
     from vllm import LLM, SamplingParams
 
     llm_parameters = os.getenv("VLLM_ENGINE_PARAMETERS")
