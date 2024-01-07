@@ -1,18 +1,26 @@
-""" Example handler file. """
-
 import runpod
+from vllm import LLM, SamplingParams
 
-# If your handler runs inference on a model, load the model here.
-# You will want models to be loaded into memory before starting serverless.
+prompts = [
+    "Hello, my name is",
+    "The president of the United States is",
+    "The capital of France is",
+    "The future of AI is",
+]
+sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
+llm = LLM(model="facebook/opt-125m")
 
 
 def handler(job):
-    """ Handler function that will be used to process jobs. """
     job_input = job['input']
 
-    name = job_input.get('name', 'World')
+    prompt = job_input.get('prompt', False)
+    if not prompt:
+        return {'error': 'Missing "prompt" key in input!'}
 
-    return f"Hello, {name}!"
+    output = llm.generate(prompt, sampling_params)[0]
+
+    return output.outputs[0].text
 
 
 runpod.serverless.start({"handler": handler})
