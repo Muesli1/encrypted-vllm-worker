@@ -16,7 +16,11 @@ def get_next_layer(output_filter, key):
 def deep_filter(obj, output_filter):
     current_layer = get_current_layer(output_filter)
 
-    print(obj, output_filter, current_layer)
+    if hasattr(obj, "__dict__"):
+        obj = obj.__dict__
+
+    # print(obj, output_filter, current_layer)
+
     if len(current_layer) == 0:
         return obj
 
