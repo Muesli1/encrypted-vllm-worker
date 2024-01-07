@@ -12,13 +12,13 @@ try:
 
     llm_parameters = os.getenv("VLLM_ENGINE_PARAMETERS")
     if llm_parameters is None:
-        llm_paramters = "{}"
+        llm_parameters = "{}"
 
     model_name = os.getenv("VLLM_MODEL_NAME")
     llm = LLM(model=model_name, **json.loads(llm_parameters))
-except Exception as e:
+except Exception as init_e:
     # Show to client when prompting
-    model_init_error = e
+    model_init_error = init_e
 
 
 def handler(job):
@@ -36,10 +36,7 @@ def handler(job):
 
         outputs = llm.generate(prompt, SamplingParams(**sampling_params))
 
-        output_filter = job_input.get('output_filter', None)
-        if output_filter is None:
-            return outputs
-
+        output_filter = job_input.get('output_filter', [])
         return deep_filter(outputs, output_filter)
     except Exception as e:
         return {'error': str(e)}
