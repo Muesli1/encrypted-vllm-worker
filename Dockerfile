@@ -1,7 +1,7 @@
 FROM runpod/base:0.4.4-cuda12.1.0
 
 ARG model_name
-ARG engine_parameters
+ARG engine_parameters="{}"
 ENV VLLM_MODEL_NAME=$model_name
 ENV VLLM_ENGINE_PARAMETERS=$engine_parameters
 
