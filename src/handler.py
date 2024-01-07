@@ -2,27 +2,47 @@ import os
 import json
 
 import runpod
-from vllm import LLM, SamplingParams
 
+from deep_filter import deep_filter
 
+model_init_error = None
 
-model_name = os.getenv("VLLM_MODEL_NAME")
-llm_parameters = os.getenv("VLLM_ENGINE_PARAMETERS")
-if llm_parameters is None:
-    llm_paramters = "{}"
+try:
+    from vllm import LLM, SamplingParams
 
-llm = LLM(model=model_name, **json.loads(llm_parameters))
+    llm_parameters = os.getenv("VLLM_ENGINE_PARAMETERS")
+    if llm_parameters is None:
+        llm_paramters = "{}"
+
+    model_name = os.getenv("VLLM_MODEL_NAME")
+    llm = LLM(model=model_name, **json.loads(llm_parameters))
+except Exception as e:
+    # Show to client when prompting
+    model_init_error = e
+
 
 def handler(job):
-    job_input = job['input']
+    try:
+        if model_init_error is not None:
+            return {'error': str(model_init_error), 'init': True}
 
-    prompt = job_input.get('prompt', False)
-    sampling_params = job_input.get('parameters', {})
+        job_input = job['input']
 
-    if not prompt:
-        return {'error': 'Missing "prompt" key in input!'}
+        prompt = job_input.get('prompt', False)
+        sampling_params = job_input.get('parameters', {})
 
-    return llm.generate(prompt, SamplingParams(**sampling_params))
+        if not prompt:
+            return {'error': 'Missing "prompt" key in input!'}
+
+        outputs = llm.generate(prompt, SamplingParams(**sampling_params))
+
+        output_filter = job_input.get('output_filter', None)
+        if output_filter is None:
+            return outputs
+
+        return deep_filter(outputs, output_filter)
+    except Exception as e:
+        return {'error': str(e)}
 
 
 runpod.serverless.start({"handler": handler})
