@@ -4,6 +4,7 @@ import json
 import runpod
 
 from deep_filter import deep_filter
+from encryption_handler import EncryptionHandler
 
 model_init_error = None
 
@@ -12,6 +13,12 @@ VERSION = "unknown"
 try:
     with open("current_version.txt", "r") as f:
         VERSION = f.readline()
+
+    encryption_key = os.getenv("ENCRYPTION_KEY")
+    if encryption_key is None:
+        encryption_key = "defaultkey"
+
+    encryption_handler = EncryptionHandler(encryption_key)
 
     from vllm import LLM, SamplingParams
 
@@ -34,7 +41,7 @@ def handler(job):
 
         job_input = job['input']
 
-        prompt = job_input.get('prompt', False)
+        prompt = encryption_handler.decrypt(job_input.get('prompt', False))
         sampling_params = job_input.get('parameters', {})
 
         if not prompt:
@@ -43,7 +50,7 @@ def handler(job):
         outputs = llm.generate(prompt, SamplingParams(**sampling_params))
 
         output_filter = job_input.get('output_filter', [])
-        return deep_filter(outputs, output_filter)
+        return encryption_handler.encrypt(json.dumps(deep_filter(outputs, output_filter)))
     except Exception as e:
         return {'error': str(e)}
 

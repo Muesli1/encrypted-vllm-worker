@@ -2,3 +2,4 @@ runpod==1.4.0
 vllm==0.2.7
 huggingface-hub==0.20.2
 hf_transfer==0.1.4
+cryptography==41.0.7
