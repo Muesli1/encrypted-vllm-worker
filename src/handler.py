@@ -12,6 +12,37 @@ model_init_error = None
 VERSION = "unknown"
 
 try:
+    import argparse
+    from vllm import AsyncLLMEngine, AsyncEngineArgs, SamplingParams
+    from vllm.utils import random_uuid
+
+
+    def async_engine_args_from_dict(arg_dict: dict[str, any]) -> AsyncEngineArgs:
+        parser = argparse.ArgumentParser()
+        AsyncEngineArgs.add_cli_args(parser)
+
+        combined_args = []
+
+        for (key, value) in arg_dict.items():
+            if value is False:
+                # Ignore flag completely
+                continue
+
+            combined_args.append("--" + key)
+            if value is True:
+                # Nothing
+                pass
+            else:
+                combined_args.append(str(value))
+
+        parsed, unknown = parser.parse_known_args(combined_args)
+
+        if len(unknown) > 0:
+            raise ValueError("Unknown arguments: " + ", ".join(unknown) + "; Use:\n" + parser.format_help())
+
+        return AsyncEngineArgs.from_cli_args(parsed)
+
+
     with open("current_version.txt", "r") as f:
         VERSION = f.readline()
 
@@ -21,15 +52,17 @@ try:
     else:
         encryption_handler = EncryptionHandler(encryption_key)
 
-    from vllm import AsyncLLMEngine, SamplingParams
-    from vllm.utils import random_uuid
-
     llm_parameters = os.getenv("VLLM_ENGINE_PARAMETERS")
     if llm_parameters is None:
         llm_parameters = "{}"
 
     model_name = os.getenv("VLLM_MODEL_NAME")
-    llm = AsyncLLMEngine(model=model_name, **json.loads(llm_parameters))
+    llm = AsyncLLMEngine.from_engine_args(
+        async_engine_args_from_dict({
+            **json.loads(llm_parameters),
+            "model": model_name
+        })
+    )
 except Exception as init_e:
     # Show to client when prompting
     model_init_error = init_e
