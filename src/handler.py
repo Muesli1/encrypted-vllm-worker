@@ -91,6 +91,8 @@ async def handler(job) -> AsyncGenerator[any, None]:
         generator = llm.generate(prompt, SamplingParams(**sampling_params), request_id)
 
         if job_input.get("streaming", False):
+            # TODO: Only stream changes instead of full text every time
+            
             async for async_request_output in generator:
                 filtered_async_output = deep_filter(async_request_output, output_filter)
 
