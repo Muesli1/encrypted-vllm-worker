@@ -85,24 +85,25 @@ async def handler(job) -> AsyncGenerator[any, None]:
         if encryption_handler is not None:
             prompt = encryption_handler.decrypt(prompt)
 
+        output_filter = job_input.get('output_filter', [])
         request_id = random_uuid()
         sampling_params = job_input.get('parameters', {})
         generator = llm.generate(prompt, SamplingParams(**sampling_params), request_id)
 
         if job_input.get("streaming", False):
             async for async_request_output in generator:
-                yield async_request_output
+                filtered_async_output = deep_filter(async_request_output, output_filter)
+
+                if encryption_handler is not None:
+                    yield encryption_handler.encrypt(json.dumps(filtered_async_output))
+                else:
+                    yield filtered_async_output
             return
 
         final_output = None
         async for request_output in generator:
             final_output = request_output
-            print("P", final_output)
-            print("D", json.dumps(final_output))
-            print("LD", json.loads(json.dumps(final_output)))
-            print("DF", deep_filter(final_output, []))
 
-        output_filter = job_input.get('output_filter', [])
         filtered_output = deep_filter(final_output, output_filter)
 
         if encryption_handler is not None:
