@@ -64,6 +64,10 @@ async def handler(job) -> AsyncGenerator[any, None]:
         final_output = None
         async for request_output in generator:
             final_output = request_output
+            print("P", final_output)
+            print("D", json.dumps(final_output))
+            print("LD", json.loads(json.dumps(final_output)))
+            print("DF", deep_filter(final_output, []))
 
         output_filter = job_input.get('output_filter', [])
         filtered_output = deep_filter(final_output, output_filter)
