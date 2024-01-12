@@ -108,7 +108,7 @@ async def handler(job) -> AsyncGenerator[any, None]:
                 partial_value = extracted_single_value
 
                 if streaming_minimize_traffic and extracted_single_value.startswith(last_extracted):
-                    partial_value = extract_single_value[len(last_extracted):]
+                    partial_value = extracted_single_value[len(last_extracted):]
                 last_extracted = extracted_single_value
 
                 if encryption_handler is not None:
