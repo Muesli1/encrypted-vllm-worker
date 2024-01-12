@@ -86,32 +86,33 @@ async def handler(job) -> AsyncGenerator[any, None]:
             prompt = encryption_handler.decrypt(prompt)
 
         output_filter = job_input.get('output_filter', [])
+        streaming_filter = job_input.get('streaming_filter', [])
         request_id = random_uuid()
         sampling_params = job_input.get('parameters', {})
         generator = llm.generate(prompt, SamplingParams(**sampling_params), request_id)
 
-        if job_input.get("streaming", False):
-            # TODO: Only stream changes instead of full text every time
-            
-            async for async_request_output in generator:
-                filtered_async_output = deep_filter(async_request_output, output_filter)
-
-                if encryption_handler is not None:
-                    yield encryption_handler.encrypt(json.dumps(filtered_async_output))
-                else:
-                    yield filtered_async_output
-            return
-
         final_output = None
-        async for request_output in generator:
-            final_output = request_output
+
+        streaming = job_input.get("streaming", False)
+
+        # TODO: Only stream changes instead of full text every time
+
+        async for async_request_output in generator:
+            final_output = async_request_output
+
+            if streaming:
+                filtered_async_output = deep_filter(async_request_output, streaming_filter)
+                if encryption_handler is not None:
+                    yield {'output': encryption_handler.encrypt(json.dumps(filtered_async_output))}
+                else:
+                    yield {'output': filtered_async_output}
 
         filtered_output = deep_filter(final_output, output_filter)
 
         if encryption_handler is not None:
-            yield encryption_handler.encrypt(json.dumps(filtered_output))
+            yield {'output': encryption_handler.encrypt(json.dumps(filtered_output))}
         else:
-            yield filtered_output
+            yield {'output': filtered_output}
 
     except Exception as e:
         yield {'error': str(e)}
