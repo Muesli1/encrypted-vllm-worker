@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 
 import runpod
 
-from deep_filter import deep_filter
+from deep_filter import deep_filter, extract_single_value
 from encryption_handler import EncryptionHandler
 
 model_init_error = None
@@ -85,6 +85,7 @@ async def handler(job) -> AsyncGenerator[any, None]:
         if encryption_handler is not None:
             prompt = encryption_handler.decrypt(prompt)
 
+        streaming_minimize_traffic = job_input.get("'streaming_min_traffic", True)
         output_filter = job_input.get('output_filter', [])
         streaming_filter = job_input.get('streaming_filter', [])
         request_id = random_uuid()
@@ -95,17 +96,25 @@ async def handler(job) -> AsyncGenerator[any, None]:
 
         streaming = job_input.get("streaming", False)
 
-        # TODO: Only stream changes instead of full text every time
+        # Only stream changes instead of full text every time
+        last_extracted = ""
 
         async for async_request_output in generator:
             final_output = async_request_output
 
             if streaming:
                 filtered_async_output = deep_filter(async_request_output, streaming_filter)
+                extracted_single_value = str(extract_single_value(filtered_async_output))
+                partial_value = extracted_single_value
+
+                if streaming_minimize_traffic and extracted_single_value.startswith(last_extracted):
+                    partial_value = extract_single_value[len(last_extracted):]
+                last_extracted = extracted_single_value
+
                 if encryption_handler is not None:
-                    yield {'output': encryption_handler.encrypt(json.dumps(filtered_async_output))}
+                    yield {'partial': encryption_handler.encrypt(partial_value)}
                 else:
-                    yield {'output': filtered_async_output}
+                    yield {'partial': partial_value}
 
         filtered_output = deep_filter(final_output, output_filter)
 

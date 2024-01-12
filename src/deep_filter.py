@@ -37,3 +37,20 @@ def deep_filter(obj, output_filter):
         return {k: deep_filter(obj[k], get_next_layer(output_filter, k)) for k in current_layer if k in obj}
 
     return obj if obj in output_filter else None
+
+
+def extract_single_value(obj):
+    if hasattr(obj, "__dict__"):
+        obj = obj.__dict__
+
+    if isinstance(obj, list):
+        if len(obj) != 1:
+            raise ValueError("Could not extract single value!")
+        return extract_single_value(obj[0])
+
+    if isinstance(obj, dict):
+        if len(obj) != 1:
+            raise ValueError("Could not extract single value!")
+        return extract_single_value(list(obj.values())[0])
+
+    return obj
